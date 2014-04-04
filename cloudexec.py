@@ -7,8 +7,10 @@ from libcloud.compute.providers import get_driver
 import os
 import os.path
 import paramiko.client
+import psutil
 import pwd
 import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -38,6 +40,7 @@ class Vm(object):
     def __init__(self, driver, image_id, size_id, key):
         self.driver = driver
         self.key = key
+        self.destroyed = False
 
         print('Get VM...', end='')
         sys.stdout.flush()
@@ -74,9 +77,20 @@ class Vm(object):
         self.setup(str(self.node.extra['password']))
 
     def __del__(self):
-        print('Destroy VM...', end='')
-        self.driver.destroy_node(self.node)
-        print('OK')
+        self.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.destroy()
+
+    def destroy(self):
+        if not self.destroyed:
+            print('Destroy VM...', end='')
+            self.driver.destroy_node(self.node)
+            self.destroyed = True
+            print('OK')
 
     def setup(self, password):
         print('Setup VM...', end='')
@@ -112,10 +126,11 @@ class Vm(object):
 
 class Sshd(object):
     def __init__(self, key_host, key_auth, workdir):
+        self.down = False
         self.key_auth = key_auth
+        self.pidfile = workdir.name + '/sshd.pid'
         cfgpath = workdir.name + '/sshd.conf'
         logpath = workdir.name + '/sshd.log'
-        pidfile = workdir.name + '/sshd.pid'
 
         print('Start sshd...', end='')
         sys.stdout.flush()
@@ -138,7 +153,7 @@ class Sshd(object):
                 .format(
                     key_host.name,
                     self.key_auth.name_pub,
-                    pidfile,
+                    self.pidfile,
                     self.port
                 )
             )
@@ -150,9 +165,23 @@ class Sshd(object):
         print('OK')
 
     def __del__(self):
-        print('Stop sshd...', end='')
-        self.process.terminate()
-        print('OK')
+        self.shutdown()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.shutdown()
+
+    def shutdown(self):
+        if not self.down:
+            print('Stop sshd...', end='')
+            sys.stdout.flush()
+            with open(self.pidfile) as pidfile:
+                shutdown_process(psutil.Process(int(pidfile.readline())))
+            shutdown_process(self.process)
+            self.down = True
+            print('OK')
 
     def find_port(self, start):
         port = start - 1
@@ -201,6 +230,27 @@ def wrap_execute(
         return channel.recv_exit_status()
 
 
+def shutdown_process(process):
+    process.send_signal(signal.SIGINT)
+    try:
+        process.wait(timeout=5)
+        ok = True
+    except subprocess.TimeoutExpired:
+        ok = False
+
+    if not ok:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+            ok = True
+        except subprocess.TimeoutExpired:
+            ok = False
+
+    if not ok:
+        process.kill()
+        process.wait()
+
+
 def get_user():
     return pwd.getpwuid(os.getuid()).pw_name
 
@@ -217,11 +267,10 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
                 vm.ip,
                 '-R{0}:localhost:{0}'.format(sshd.port)
             ],
-            stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        stack.callback(process_port.terminate)
+        stack.callback(lambda: shutdown_process(process_port))
 
         # establish SSH connection
         client = paramiko.client.SSHClient()
@@ -297,39 +346,40 @@ def main():
         config = yaml.load(args.config.read())
 
     tmpdir = tempfile.TemporaryDirectory()
+
     key_ssh = Key(name=tmpdir.name + '/key.ssh')
     key_mount = Key(name=tmpdir.name + '/key.mount')
     key_local = Key(name=tmpdir.name + '/key.local')
-    sshd = Sshd(
+
+    with Sshd(
         key_host=key_local,
         key_auth=key_mount,
         workdir=tmpdir
-    )
+    ) as sshd:
+        print('Connect to provider...', end='')
+        sys.stdout.flush()
+        cls = get_driver(getattr(Provider, str(config['provider']).upper()))
+        driver = cls(
+            str(config['username']),
+            str(config['api_key']),
+            region=str(config['region'])
+        )
+        print('OK')
 
-    print('Connect to provider...', end='')
-    sys.stdout.flush()
-    cls = get_driver(getattr(Provider, str(config['provider']).upper()))
-    driver = cls(
-        str(config['username']),
-        str(config['api_key']),
-        region=str(config['region'])
-    )
-    print('OK')
-
-    vm = Vm(
-        driver=driver,
-        image_id=str(config['image_id']),
-        size_id=str(config['size_id']),
-        key=key_ssh
-    )
-    execute(
-        vm=vm,
-        sshd=sshd,
-        mountdir=args.basedir,
-        exedir=os.curdir,
-        executable=args.executable,
-        arguments=args.arguments
-    )
+        with Vm(
+            driver=driver,
+            image_id=str(config['image_id']),
+            size_id=str(config['size_id']),
+            key=key_ssh
+        ) as vm:
+            execute(
+                vm=vm,
+                sshd=sshd,
+                mountdir=args.basedir,
+                exedir=os.curdir,
+                executable=args.executable,
+                arguments=args.arguments
+            )
 
 
 if __name__ == '__main__':
