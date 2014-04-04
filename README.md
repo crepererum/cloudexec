@@ -1,4 +1,4 @@
-# cloudexec [![Build Status](https://travis-ci.org/crepererum/cloudexec.svg?branch=master)](https://travis-ci.org/crepererum/cloudexec)
+# cloudexec [![Build Status](https://travis-ci.org/crepererum/cloudexec.svg?branch=master)](https://travis-ci.org/crepererum/cloudexec) [![Requirements Status](https://requires.io/github/crepererum/cloudexec/requirements.png?branch=master)](https://requires.io/github/crepererum/cloudexec/requirements/?branch=master)
 Sometimes you just need a bigger machine for your tasks, so why not use one? Cloudexec provides you an easy way to execute one command on remote machine which is allocated, set up and destroyed on demand. So you get power but paying a lot of money and manual setup.
 
 ## Requirements
