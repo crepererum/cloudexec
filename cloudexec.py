@@ -167,7 +167,13 @@ class Sshd(object):
         return port
 
 
-def wrap_execute(client, command, pipe_in=sys.stdin.buffer, pipe_out=sys.stdout.buffer, pipe_err=sys.stderr.buffer):
+def wrap_execute(
+        client,
+        command,
+        pipe_in=sys.stdin.buffer,
+        pipe_out=sys.stdout.buffer,
+        pipe_err=sys.stderr.buffer
+        ):
     with contextlib.ExitStack() as stack:
         channel = client.get_transport().open_session()
         stack.callback(channel.close)
