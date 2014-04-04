@@ -1,0 +1,9 @@
+language: python
+python:
+    - "3.3"
+install:
+    - pip install -r ./autotex/requirements.txt
+    - pip install -r ./autotex/requirements-dev.txt
+script:
+    - flake8 -v .
+
