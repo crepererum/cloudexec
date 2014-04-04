@@ -66,15 +66,21 @@ class Vm(object):
         image = image_filtered[0]
         size = size_filtered[0]
 
+        self.kpair = driver.import_key_pair_from_file(
+            key_file_path=self.key.name_pub,
+            name=name
+        )
+
         self.node = self.driver.create_node(
             name=name,
             size=size,
-            image=image
+            image=image,
+            ex_keyname=name
         )
         self.ip = self.driver.wait_until_running([self.node])[0][1][0]
         print('OK')
 
-        self.setup(str(self.node.extra['password']))
+        self.setup()
 
     def __del__(self):
         self.destroy()
@@ -89,10 +95,11 @@ class Vm(object):
         if not self.destroyed:
             print('Destroy VM...', end='')
             self.driver.destroy_node(self.node)
+            self.driver.delete_key_pair(self.kpair)
             self.destroyed = True
             print('OK')
 
-    def setup(self, password):
+    def setup(self):
         print('Setup VM...', end='')
         sys.stdout.flush()
         with contextlib.ExitStack() as stack:
@@ -102,17 +109,18 @@ class Vm(object):
             client.connect(
                 self.ip,
                 username='root',
-                password=password
+                key_filename=self.key.name,
+                look_for_keys=False
             )
             stack.callback(client.close)
 
-            # secure account by enable key login and delete password
-            sftp = client.open_sftp()
-            stack.callback(sftp.close)
-            if '.ssh' not in sftp.listdir():
-                sftp.mkdir('.ssh')
-            sftp.put(self.key.name_pub, '.ssh/authorized_keys')
-            wrap_execute(client, 'passwd -d')
+            # secure account by deleting password
+            wrap_execute(
+                client,
+                'passwd -d root',
+                pipe_out=NULLPIPE,
+                pipe_err=NULLPIPE
+            )
 
             # update and install required packages
             wrap_execute(
