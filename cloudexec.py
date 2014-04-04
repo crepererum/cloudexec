@@ -17,7 +17,7 @@ import uuid
 import yaml
 
 
-NULLPIPE = open(os.devnull, 'rb+')
+NULLPIPE = open(os.devnull, 'r+b')
 
 
 class Key(object):
