@@ -10,6 +10,8 @@ To get this monster running you'll need:
  - sshd (installed, no configuration or root access required)
 
 ## Configuration
+**WARNING: Please set the file permissions for the configuration file wisely (e.g. `chmod 600 ~./cloudexecrc`). Otherwise other users might be able to read your secret API keys! Never share the configuration file or copy it to unsecure locations!**
+
 Before you can kick some code you need to configure a cloud provider. Cloudexec reads all required data from `~/.cloudexecrc` which is a YAML file. The following template sets up an Arch Linux using Rackspace and a small virtual machine:
 
     image_id: 5345417c-23e4-4402-9243-5469cdc4730b
@@ -27,4 +29,8 @@ To run a command in the cloud just use
 Your current working dictionary is available so you can simply get the folder entries by
 
     cloudexec ls -la
+
+Even writing files is supported. Just try
+
+    cloudexec touch hello
 

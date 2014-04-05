@@ -354,6 +354,7 @@ def main():
         config = yaml.load(args.config.read())
 
     tmpdir = tempfile.TemporaryDirectory()
+    os.chmod(tmpdir.name, 0o700)
 
     key_ssh = Key(name=tmpdir.name + '/key.ssh')
     key_mount = Key(name=tmpdir.name + '/key.mount')
