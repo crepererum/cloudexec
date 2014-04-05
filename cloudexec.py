@@ -284,6 +284,7 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
             [
                 'ssh',
                 '-oStrictHostKeyChecking=no',
+                '-oUserKnownHostsFile=/dev/null',
                 '-lroot',
                 '-i' + vm.key.name,
                 vm.ip,
@@ -317,7 +318,12 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
         sftp.mkdir('mount')
         wrap_execute(
             client,
-            'sshfs -oStrictHostKeyChecking=no {0}@localhost:{2} mount -p {1}'
+            'sshfs'
+            ' -oStrictHostKeyChecking=no'
+            ' -oUserKnownHostsFile=/dev/null'
+            ' {0}@localhost:{2}'
+            ' mount'
+            ' -p {1}'
             .format(get_user(), sshd.port, mountdir)
         )
         stack.callback(lambda: wrap_execute(client, 'fusermount -u mount'))
