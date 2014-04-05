@@ -123,9 +123,23 @@ class Vm(object):
             )
 
             # update and install required packages
+            method_apt = \
+                'apt-get -y update' \
+                ' && apt-get -y upgrade' \
+                ' && apt-get -y install sshfs'
+            method_yum = \
+                'yum -y update' \
+                ' && yup -y install fuse-sshfs'
+            method_pacmam = \
+                'pacman -Suy --noconfirm' \
+                ' && pacman -S sshfs --noconfirm'
+            method_all = ' || '.join(
+                '({})'.format(s)
+                for s in (method_apt, method_yum, method_pacmam)
+            )
             wrap_execute(
                 client,
-                'pacman -Suy --noconfirm && pacman -S sshfs --noconfirm',
+                method_all,
                 pipe_out=NULLPIPE,
                 pipe_err=NULLPIPE
             )
