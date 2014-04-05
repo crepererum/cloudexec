@@ -5,14 +5,14 @@ Sometimes you just need a bigger machine for your tasks, so why not use one? Clo
 To get this monster running you'll need:
 
  - Linux
- - Python >= 3.3
- - Python modules mentioned in `requirements.txt` (you can use a virtualenv)
- - sshd (installed, no configuration or root access required)
+ - [Python >= 3.3](https://www.python.org/)
+ - Python modules mentioned in `requirements.txt` (you can use a [venv](https://docs.python.org/3.3/library/venv.html))
+ - [sshd](http://www.openssh.com/) (installed, no configuration or root access required)
 
 ## Configuration
 **WARNING: Please set the file permissions for the configuration file wisely (e.g. `chmod 600 ~/.cloudexecrc`). Otherwise other users might be able to read your secret API keys! Never share the configuration file or copy it to unsecure locations!**
 
-Before you can kick some code you need to configure a cloud provider. Cloudexec reads all required data from `~/.cloudexecrc` which is a YAML file. The following template sets up an Arch Linux using Rackspace and a small virtual machine:
+Before you can kick some code you need to configure a cloud provider. Cloudexec reads all required data from `~/.cloudexecrc` which is a [YAML](https://en.wikipedia.org/wiki/YAML) file. The following template sets up an [Arch Linux](https://www.archlinux.org/) using [Rackspace](https://www.rackspace.com/) and a small virtual machine:
 
     image_id: 5345417c-23e4-4402-9243-5469cdc4730b
     size_id: 2
