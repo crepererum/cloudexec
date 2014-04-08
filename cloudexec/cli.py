@@ -100,7 +100,7 @@ def coro_cli(path, config, tmpdir):
         key_auth=key_mount,
         workdir=tmpdir
     ) as sshd:
-        execute(
+        return execute(
             container=container,
             sshd=sshd,
             mountdir=str(config['basedir']),
@@ -148,7 +148,8 @@ def execute(container, sshd, mountdir, exedir, executable, arguments):
 
         # use the key to mount files
         mountdir = os.path.abspath(mountdir)
-        sftp.mkdir('mount')
+        if 'mount' not in sftp.listdir():
+            sftp.mkdir('mount')
         cloudexec.common.wrap_execute(
             client,
             'sshfs'
@@ -170,4 +171,4 @@ def execute(container, sshd, mountdir, exedir, executable, arguments):
             'cd mount/' + exedir \
             + ' &&  ' \
             + ' '.join(shlex.quote(s) for s in [executable] + arguments)
-        cloudexec.common.wrap_execute(client, command)
+        return cloudexec.common.wrap_execute(client, command)

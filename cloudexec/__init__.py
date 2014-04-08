@@ -75,6 +75,7 @@ def main():
     asyncio.set_event_loop_policy(aiozmq.ZmqEventLoopPolicy())
     loop = asyncio.get_event_loop()
     path = os.path.expanduser('~/.cloudexec')
+    status = 0
     try:
         if config['daemon']:
             logging.info('Switch to daemon mode')
@@ -86,7 +87,7 @@ def main():
             logging.info('Daemon running, press CTRL-C to stop')
             loop.run_forever()
         else:
-            loop.run_until_complete(cloudexec.cli.coro_cli(
+            status = loop.run_until_complete(cloudexec.cli.coro_cli(
                 path=path,
                 config=config,
                 tmpdir=tmpdir
@@ -96,3 +97,5 @@ def main():
         logging.info('Interrupted, waiting for shutdown')
     finally:
         loop.close()
+
+    exit(status)

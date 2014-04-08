@@ -37,6 +37,12 @@ Your current working dictionary is available so you can simply get the folder en
 Even writing files is supported. Just try
 
     python -mcloudexec touch hello
+    ls -la hello
+
+Return values are preserved, even through multiple script levels
+
+    python -mcloudexec sh -c "exit 13"
+    echo $?
 
 **WARNING: The daemon tries to destroy all VMs at shutdown or when it crashes. Because there can be connection problems or other unexpected errors or even bugs in cloudexec or one of the used libraries, some VMs might live forever. Please check the dashboard of your cloud provider and kill all remaining VMs with the name `cloudexec...` to avoid high costs! The same might be true for SSH key-pairs.**
 
