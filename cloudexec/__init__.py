@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import cloudexec.cli
 import cloudexec.daemon
+import logging
 import os
 import os.path
 import signal
@@ -55,6 +56,15 @@ def parse_args():
 def main():
     args = parse_args()
 
+    loglevel = logging.WARNING
+    if args.daemon:
+        loglevel = logging.INFO
+    logging.basicConfig(
+        format='%(asctime) -15s [%(levelname)s]: %(message)s',
+        level=loglevel
+    )
+    logging.info('Start cloudexec')
+
     with args.config:
         config = yaml.load(args.config.read())
     config.update(vars(args))
@@ -67,11 +77,13 @@ def main():
     path = os.path.expanduser('~/.cloudexec')
     try:
         if config['daemon']:
+            logging.info('Switch to daemon mode')
             loop.run_until_complete(cloudexec.daemon.coro_daemon(
                 path=path,
                 config=config,
                 tmpdir=tmpdir
             ))
+            logging.info('Daemon running')
             loop.run_forever()
         else:
             loop.run_until_complete(cloudexec.cli.coro_cli(
@@ -81,5 +93,6 @@ def main():
             ))
     except KeyboardInterrupt:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+        logging.info('Interrupted, waiting for shutdown')
     finally:
         loop.close()

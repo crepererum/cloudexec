@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import msgpack
 import os
 import pwd
@@ -19,13 +20,12 @@ class Key(object):
         self.name = name
         self.name_pub = self.name + '.pub'
 
-        print('Generate key...', end='')
-        sys.stdout.flush()
+        logging.info('Generate key "%s"', self.name)
         subprocess.check_call(
             ['ssh-keygen', '-t', 'rsa', '-f', self.name, '-P', ''],
             stdout=subprocess.DEVNULL
         )
-        print('OK')
+        logging.info('Finished key generation of "%s"', self.name)
 
     def __del__(self):
         try:

@@ -4,9 +4,9 @@ import cloudexec.common
 import contextlib
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+import logging
 import os
 import paramiko
-import sys
 import uuid
 
 
@@ -16,8 +16,7 @@ class Vm(object):
         self.key = key
         self.destroyed = False
 
-        print('Get VM...', end='')
-        sys.stdout.flush()
+        logging.info('Get VM')
         image_filtered = [
             i
             for i in self.driver.list_images()
@@ -30,10 +29,10 @@ class Vm(object):
         ]
 
         if not image_filtered:
-            print('Error: No image found!')
+            logging.error('No VM image found')
             exit(1)
         if not size_filtered:
-            print('Error: No size found!')
+            logging.error('No VM size found')
             exit(1)
 
         name = 'cloudexec_' + str(uuid.uuid4())
@@ -52,7 +51,7 @@ class Vm(object):
             ex_keyname=name
         )
         self.ip = self.driver.wait_until_running([self.node])[0][1][0]
-        print('OK')
+        logging.info('VM is up and running')
 
         self.setup()
 
@@ -67,15 +66,14 @@ class Vm(object):
 
     def destroy(self):
         if not self.destroyed:
-            print('Destroy VM...', end='')
+            logging.info('Destroy VM')
             self.driver.destroy_node(self.node)
             self.driver.delete_key_pair(self.kpair)
             self.destroyed = True
-            print('OK')
+            logging.info('VM was successful deleted')
 
     def setup(self):
-        print('Setup VM...', end='')
-        sys.stdout.flush()
+        logging.info('Start VM setup')
         with contextlib.ExitStack() as stack:
             # establish connection
             client = paramiko.client.SSHClient()
@@ -117,7 +115,7 @@ class Vm(object):
                 pipe_out=cloudexec.common.NULLPIPE,
                 pipe_err=cloudexec.common.NULLPIPE
             )
-        print('OK')
+        logging.info('Finished VM setup')
 
 
 class ServerHandler(aiozmq.rpc.AttrHandler):
@@ -126,15 +124,14 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
         self.tmpdir = tmpdir
         self.key_ssh = cloudexec.common.Key(name=tmpdir.name + '/key.ssh')
 
-        print('Connect to provider...', end='')
-        sys.stdout.flush()
+        logging.info('Connect to provider')
         cls = get_driver(getattr(Provider, str(config['provider']).upper()))
         self.driver = cls(
             str(config['username']),
             str(config['api_key']),
             region=str(config['region'])
         )
-        print('OK')
+        logging.info('Provider details are fine')
 
         self.vm = Vm(
             driver=self.driver,

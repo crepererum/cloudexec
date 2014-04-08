@@ -2,13 +2,13 @@ import aiozmq.rpc
 import asyncio
 import cloudexec.common
 import contextlib
+import logging
 import os
 import paramiko
 import psutil
 import shlex
 import socket
 import subprocess
-import sys
 
 
 class Sshd(object):
@@ -19,8 +19,7 @@ class Sshd(object):
         cfgpath = workdir.name + '/sshd.conf'
         logpath = workdir.name + '/sshd.log'
 
-        print('Start sshd...', end='')
-        sys.stdout.flush()
+        logging.info('Boot sshd')
 
         self.port = self.find_port(8000)
 
@@ -49,7 +48,7 @@ class Sshd(object):
             ['/usr/bin/sshd', '-f', cfgpath, '-E', logpath],
             stdout=subprocess.DEVNULL
         )
-        print('OK')
+        logging.info('sshd is running')
 
     def __del__(self):
         self.shutdown()
@@ -62,15 +61,14 @@ class Sshd(object):
 
     def shutdown(self):
         if not self.down:
-            print('Stop sshd...', end='')
-            sys.stdout.flush()
+            logging.info('Shutdown sshd')
             with open(self.pidfile) as pidfile:
                 cloudexec.common.shutdown_process(
                     psutil.Process(int(pidfile.readline()))
                 )
             cloudexec.common.shutdown_process(self.process)
             self.down = True
-            print('OK')
+            logging.info('sshd shutdown complete')
 
     def find_port(self, start):
         port = start - 1
