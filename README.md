@@ -22,15 +22,19 @@ Before you can kick some code you need to configure a cloud provider. Cloudexec 
     provider: rackspace
 
 ## Usage
+First of all you need to start a daemon which manages all your accounts and running VMs
+
+    python -mcloudexec -d
+
 To run a command in the cloud just use
 
-    cloudexec your_command --including -p -a --ram=eter s
+    python -mcloudexec your_command --including -p -a --ram=eter s
 
 Your current working dictionary is available so you can simply get the folder entries by
 
-    cloudexec ls -la
+    python -mcloudexec ls -la
 
 Even writing files is supported. Just try
 
-    cloudexec touch hello
+    python -mcloudexec touch hello
 

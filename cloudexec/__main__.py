@@ -1,0 +1,3 @@
+import cloudexec
+
+cloudexec.main()
