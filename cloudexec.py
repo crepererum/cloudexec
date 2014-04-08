@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import aiozmq
+import aiozmq.rpc
 import argparse
+import asyncio
 import contextlib
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+import msgpack
 import os
 import os.path
 import paramiko.client
@@ -288,7 +292,7 @@ def get_user():
     return pwd.getpwuid(os.getuid()).pw_name
 
 
-def execute(vm, sshd, mountdir, exedir, executable, arguments):
+def execute(container, sshd, mountdir, exedir, executable, arguments):
     with contextlib.ExitStack() as stack:
         # setup reverse port forwarding to bypass NAS and firewall
         process_port = subprocess.Popen(
@@ -296,9 +300,9 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
                 'ssh',
                 '-oStrictHostKeyChecking=no',
                 '-oUserKnownHostsFile=/dev/null',
-                '-lroot',
-                '-i' + vm.key.name,
-                vm.ip,
+                '-l' + container.user,
+                '-i' + container.key,
+                container.ip,
                 '-R{0}:localhost:{0}'.format(sshd.port)
             ],
             stdout=subprocess.DEVNULL,
@@ -310,9 +314,9 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
         client = paramiko.client.SSHClient()
         client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
         client.connect(
-            vm.ip,
-            username='root',
-            key_filename=vm.key.name,
+            container.ip,
+            username=container.user,
+            key_filename=container.key,
             look_for_keys=False
         )
         stack.callback(client.close)
@@ -347,9 +351,6 @@ def execute(vm, sshd, mountdir, exedir, executable, arguments):
             + ' '.join(shlex.quote(s) for s in [executable] + arguments)
         wrap_execute(client, command)
 
-        # test
-        client.invoke_shell()
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -361,13 +362,20 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--daemon', '-d',
+        action='store_true',
+        default=False,
+    )
+
+    parser.add_argument(
         '--basedir', '-b',
         type=str,
         default='.'
     )
 
     parser.add_argument(
-        'executable'
+        'executable',
+        nargs='?'
     )
 
     parser.add_argument(
@@ -375,19 +383,90 @@ def parse_args():
         nargs=argparse.REMAINDER
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.daemon and not args.executable:
+        parser.print_help()
+        exit(0)
+
+    return args
 
 
-def main():
-    args = parse_args()
+class Container(object):
+    def __init__(self, ip, user, key):
+        self.ip = ip
+        self.user = user
+        self.key = key
 
-    with args.config:
-        config = yaml.load(args.config.read())
 
-    tmpdir = tempfile.TemporaryDirectory()
-    os.chmod(tmpdir.name, 0o700)
+RPC_TRANSLATION_TABLE = {
+    0: (
+        Container,
+        lambda value: msgpack.packb(
+            (value.ip, value.user, value.key),
+            use_bin_type=True
+        ),
+        lambda binary: Container(*msgpack.unpackb(
+            binary,
+            encoding='utf-8'
+        ))
+    )
+}
 
-    key_ssh = Key(name=tmpdir.name + '/key.ssh')
+
+class ServerHandler(aiozmq.rpc.AttrHandler):
+    def __init__(self, config, tmpdir):
+        self.config = config
+        self.tmpdir = tmpdir
+        self.key_ssh = Key(name=tmpdir.name + '/key.ssh')
+
+        print('Connect to provider...', end='')
+        sys.stdout.flush()
+        cls = get_driver(getattr(Provider, str(config['provider']).upper()))
+        self.driver = cls(
+            str(config['username']),
+            str(config['api_key']),
+            region=str(config['region'])
+        )
+        print('OK')
+
+        self.vm = Vm(
+            driver=self.driver,
+            image_id=str(config['image_id']),
+            size_id=str(config['size_id']),
+            key=self.key_ssh
+        )
+
+    def __del__(self):
+        self.vm.destroy()
+
+    @aiozmq.rpc.method
+    def get_container(self, profile: str):
+        return Container(self.vm.ip, 'root', self.vm.key.name)
+
+
+@asyncio.coroutine
+def coro_server(path, config, tmpdir):
+    try:
+        os.mkdir(path, 0o700)
+    except FileExistsError:
+        os.chmod(path, 0o700)
+
+    yield from aiozmq.rpc.serve_rpc(
+        ServerHandler(config, tmpdir),
+        bind='ipc://{}/socket'.format(path),
+        translation_table=RPC_TRANSLATION_TABLE
+    )
+
+
+@asyncio.coroutine
+def coro_client(path, config, tmpdir):
+    client = yield from aiozmq.rpc.connect_rpc(
+        connect='ipc://{}/socket'.format(path),
+        translation_table=RPC_TRANSLATION_TABLE
+    )
+
+    container = yield from client.call.get_container('default')
+
     key_mount = Key(name=tmpdir.name + '/key.mount')
     key_local = Key(name=tmpdir.name + '/key.local')
 
@@ -396,30 +475,47 @@ def main():
         key_auth=key_mount,
         workdir=tmpdir
     ) as sshd:
-        print('Connect to provider...', end='')
-        sys.stdout.flush()
-        cls = get_driver(getattr(Provider, str(config['provider']).upper()))
-        driver = cls(
-            str(config['username']),
-            str(config['api_key']),
-            region=str(config['region'])
+        execute(
+            container=container,
+            sshd=sshd,
+            mountdir=str(config['basedir']),
+            exedir=os.curdir,
+            executable=config['executable'],
+            arguments=config['arguments']
         )
-        print('OK')
 
-        with Vm(
-            driver=driver,
-            image_id=str(config['image_id']),
-            size_id=str(config['size_id']),
-            key=key_ssh
-        ) as vm:
-            execute(
-                vm=vm,
-                sshd=sshd,
-                mountdir=args.basedir,
-                exedir=os.curdir,
-                executable=args.executable,
-                arguments=args.arguments
-            )
+
+def main():
+    args = parse_args()
+
+    with args.config:
+        config = yaml.load(args.config.read())
+    config.update(vars(args))
+
+    tmpdir = tempfile.TemporaryDirectory()
+    os.chmod(tmpdir.name, 0o700)
+
+    asyncio.set_event_loop_policy(aiozmq.ZmqEventLoopPolicy())
+    loop = asyncio.get_event_loop()
+    path = os.path.expanduser('~/.cloudexec')
+    try:
+        if config['daemon']:
+            loop.run_until_complete(coro_server(
+                path=path,
+                config=config,
+                tmpdir=tmpdir
+            ))
+            loop.run_forever()
+        else:
+            loop.run_until_complete(coro_client(
+                path=path,
+                config=config,
+                tmpdir=tmpdir
+            ))
+    except KeyboardInterrupt:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    finally:
+        loop.close()
 
 
 if __name__ == '__main__':

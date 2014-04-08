@@ -5,8 +5,8 @@ Sometimes you just need a bigger machine for your tasks, so why not use one? Clo
 To get this monster running you'll need:
 
  - Linux
- - [Python >= 3.3](https://www.python.org/)
- - Python modules mentioned in `requirements.txt` (you can use a [venv](https://docs.python.org/3.3/library/venv.html))
+ - [Python >= 3.4](https://www.python.org/)
+ - Python modules mentioned in `requirements.txt` (you can use a [venv](https://docs.python.org/3.4/library/venv.html))
  - [sshd](http://www.openssh.com/) (installed, no configuration or root access required)
 
 ## Configuration
