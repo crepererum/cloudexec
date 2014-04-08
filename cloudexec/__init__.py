@@ -36,6 +36,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        default=False
+    )
+
+    parser.add_argument(
         'executable',
         nargs='?'
     )
@@ -57,7 +63,7 @@ def main():
     args = parse_args()
 
     loglevel = logging.WARNING
-    if args.daemon:
+    if args.daemon or args.verbose:
         loglevel = logging.INFO
     logging.basicConfig(
         format='%(asctime) -15s [%(levelname)s]: %(message)s',
