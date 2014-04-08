@@ -15,46 +15,56 @@ import yaml
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Runs programs on a cloud VM',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     parser.add_argument(
         '--config', '-f',
         type=open,
-        default=os.path.expanduser('~/.cloudexecrc')
+        default=os.path.expanduser('~/.cloudexecrc'),
+        help='Configuration file (YAML)'
     )
 
     parser.add_argument(
         '--daemon', '-d',
         action='store_true',
         default=False,
+        help='Start daemon'
     )
 
     parser.add_argument(
         '--basedir', '-b',
         type=str,
-        default='.'
+        default='.',
+        help='Basedir for file system synchronization'
     )
 
     parser.add_argument(
         '--profile', '-p',
         type=str,
-        default='default'
+        default='default',
+        help='Profile of the requested VM as configured'
     )
 
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
-        default=False
+        default=False,
+        help='Print more output (ignored in daemon mode)'
     )
 
     parser.add_argument(
         'executable',
-        nargs='?'
+        nargs='?',
+        help='Executable or script that will executed remotely'
     )
 
     parser.add_argument(
         'arguments',
-        nargs=argparse.REMAINDER
+        nargs=argparse.REMAINDER,
+        help='Arguments for your payload executable/script'
     )
 
     args = parser.parse_args()
