@@ -192,7 +192,6 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
                 + '/key.ssh.'
                 + key_id
             )
-            print("foo")
 
             self.vms[profile] = Vm(
                 driver=driver,
