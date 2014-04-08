@@ -35,6 +35,17 @@ class Key(object):
         )
         print('OK')
 
+    def __del__(self):
+        try:
+            os.remove(self.name)
+        except FileNotFoundError:
+            pass
+
+        try:
+            os.remove(self.name_pub)
+        except FileNotFoundError:
+            pass
+
 
 class Vm(object):
     def __init__(self, driver, image_id, size_id, key):
