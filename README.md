@@ -38,3 +38,5 @@ Even writing files is supported. Just try
 
     python -mcloudexec touch hello
 
+**WARNING: The daemon tries to destroy all VMs at shutdown or when it crashes. Because there can be connection problems or other unexpected errors or even bugs in cloudexec or one of the used libraries, some VMs might live forever. Please check the dashboard of your cloud provider and kill all remaining VMs with the name `cloudexec...` to avoid high costs! The same might be true for SSH key-pairs.**
+
