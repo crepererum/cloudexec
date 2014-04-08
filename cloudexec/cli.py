@@ -87,10 +87,11 @@ class Sshd(object):
 def coro_cli(path, config, tmpdir):
     client = yield from aiozmq.rpc.connect_rpc(
         connect='ipc://{}/socket'.format(path),
+        error_table=cloudexec.common.RPC_ERROR_TABLE,
         translation_table=cloudexec.common.RPC_TRANSLATION_TABLE
     )
 
-    container = yield from client.call.get_container('default')
+    container = yield from client.call.get_container(config['profile'])
 
     key_mount = cloudexec.common.Key(name=tmpdir.name + '/key.mount')
     key_local = cloudexec.common.Key(name=tmpdir.name + '/key.local')

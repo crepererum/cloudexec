@@ -1,5 +1,6 @@
 import aiozmq
 import asyncio
+import base64
 import cloudexec.common
 import contextlib
 from libcloud.compute.types import Provider
@@ -70,7 +71,7 @@ class Vm(object):
             self.driver.destroy_node(self.node)
             self.driver.delete_key_pair(self.kpair)
             self.destroyed = True
-            logging.info('VM was successful deleted')
+            logging.info('VM was successfully deleted')
 
     def setup(self):
         logging.info('Start VM setup')
@@ -122,30 +123,89 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
     def __init__(self, config, tmpdir):
         self.config = config
         self.tmpdir = tmpdir
-        self.key_ssh = cloudexec.common.Key(name=tmpdir.name + '/key.ssh')
-
-        logging.info('Connect to provider')
-        cls = get_driver(getattr(Provider, str(config['provider']).upper()))
-        self.driver = cls(
-            str(config['username']),
-            str(config['api_key']),
-            region=str(config['region'])
-        )
-        logging.info('Provider details are fine')
-
-        self.vm = Vm(
-            driver=self.driver,
-            image_id=str(config['image_id']),
-            size_id=str(config['size_id']),
-            key=self.key_ssh
-        )
+        self.drivers = {}
+        self.vms = {}
 
     def __del__(self):
-        self.vm.destroy()
+        for vm in self.vms.values():
+            vm.destroy()
 
     @aiozmq.rpc.method
     def get_container(self, profile: str):
-        return cloudexec.common.Container(self.vm.ip, 'root', self.vm.key.name)
+        if profile not in self.vms:
+            self.create_vm(profile)
+        vm = self.vms[profile]
+        return cloudexec.common.Container(vm.ip, 'root', vm.key.name)
+
+    def create_driver(self, account):
+        if account not in self.config['accounts']:
+            raise cloudexec.common.RequestException(
+                'Unknown account "{}"'.format(account)
+            )
+
+        aconfig = self.config['accounts'][account]
+        try:
+            logging.info('Connect to provider')
+
+            pname = str(aconfig['provider']).upper()
+            if not hasattr(Provider, pname):
+                raise cloudexec.common.RequestException(
+                    'Unknown provider "{}"'.format(pname)
+                )
+            cls = get_driver(
+                getattr(Provider, pname)
+            )
+
+            self.drivers[account] = cls(
+                str(aconfig['username']),
+                str(aconfig['api_key']),
+                region=str(aconfig['region'])
+            )
+
+            logging.info('Provider details are fine')
+        except KeyError as e:
+            raise cloudexec.common.RequestException(
+                'Invalid account configuration for account "{0}"'
+                ', "{1}" attribute is missing'
+                .format(account, e.args[0])
+            )
+
+    def create_vm(self, profile):
+        if profile not in self.config['profiles']:
+            raise cloudexec.common.RequestException(
+                'Unknown profile "{}"'.format(profile)
+            )
+
+        pconfig = self.config['profiles'][profile]
+        try:
+            account = pconfig['account']
+            if account not in self.drivers:
+                self.create_driver(account)
+            driver = self.drivers[account]
+
+            key_id = str(
+                base64.encodestring(bytes(profile, 'utf-8')),
+                'utf-8'
+            )[:-2]
+            key_ssh = cloudexec.common.Key(
+                name=self.tmpdir.name
+                + '/key.ssh.'
+                + key_id
+            )
+            print("foo")
+
+            self.vms[profile] = Vm(
+                driver=driver,
+                image_id=str(pconfig['image_id']),
+                size_id=str(pconfig['size_id']),
+                key=key_ssh
+            )
+        except KeyError as e:
+            raise cloudexec.common.RequestException(
+                'Invalid profile configuration for profile "{0}"'
+                ', "{1}" attribute is missing'
+                .format(profile, e.args[0])
+            )
 
 
 @asyncio.coroutine

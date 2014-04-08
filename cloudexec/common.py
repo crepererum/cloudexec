@@ -39,6 +39,11 @@ class Key(object):
             pass
 
 
+class RequestException(Exception):
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+
+
 def get_user():
     return pwd.getpwuid(os.getuid()).pw_name
 
@@ -99,6 +104,12 @@ def wrap_execute(
 
 
 NULLPIPE = open(os.devnull, 'r+b')
+
+
+RPC_ERROR_TABLE = {
+    RequestException.__module__ + '.' + RequestException.__name__:
+        RequestException
+}
 
 
 RPC_TRANSLATION_TABLE = {

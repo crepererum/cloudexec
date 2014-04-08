@@ -36,6 +36,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--profile', '-p',
+        type=str,
+        default='default'
+    )
+
+    parser.add_argument(
         '--verbose', '-v',
         action='store_true',
         default=False

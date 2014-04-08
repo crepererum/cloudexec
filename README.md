@@ -14,12 +14,17 @@ To get this monster running you'll need:
 
 Before you can kick some code you need to configure a cloud provider. Cloudexec reads all required data from `~/.cloudexecrc` which is a [YAML](https://en.wikipedia.org/wiki/YAML) file. The following template sets up an [Arch Linux](https://www.archlinux.org/) using [Rackspace](https://www.rackspace.com/) and a small virtual machine:
 
-    image_id: 5345417c-23e4-4402-9243-5469cdc4730b
-    size_id: 2
-    username: <YOUR RACKSPACE USERNAME>
-    api_key: <YOUR API KEY GOES HERE>
-    region: iad
-    provider: rackspace
+    accounts:
+        myrackspace:
+            username: <YOUR RACKSPACE USERNAME>
+            api_key: <YOUR API KEY GOES HERE>
+            region: iad
+            provider: rackspace
+    profiles:
+        default:
+            image_id: 5345417c-23e4-4402-9243-5469cdc4730b
+            size_id: 2
+            account: myrackspace
 
 ## Usage
 First of all you need to start a daemon which manages all your accounts and running VMs
