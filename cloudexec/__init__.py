@@ -83,7 +83,7 @@ def main():
                 config=config,
                 tmpdir=tmpdir
             ))
-            logging.info('Daemon running')
+            logging.info('Daemon running, press CTRL-C to stop')
             loop.run_forever()
         else:
             loop.run_until_complete(cloudexec.cli.coro_cli(
