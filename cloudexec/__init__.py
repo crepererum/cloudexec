@@ -5,11 +5,13 @@ import aiozmq.rpc
 import argparse
 import asyncio
 import cloudexec.cli
+import cloudexec.common
 import cloudexec.daemon
 import logging
 import os
 import os.path
 import signal
+import sys
 import tempfile
 import yaml
 
@@ -117,6 +119,9 @@ def main():
     except KeyboardInterrupt:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         logging.info('Interrupted, waiting for shutdown')
+    except cloudexec.common.RequestException as e:
+        print(e, file=sys.stderr)
+        status = 1
     finally:
         loop.close()
 

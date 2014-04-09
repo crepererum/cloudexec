@@ -30,11 +30,15 @@ class Vm(object):
         ]
 
         if not image_filtered:
-            logging.error('No VM image found')
-            exit(1)
+            raise cloudexec.common.RequestException(
+                'No VM image with ID "{}" found'
+                .format(image_id)
+            )
         if not size_filtered:
-            logging.error('No VM size found')
-            exit(1)
+            raise cloudexec.common.RequestException(
+                'No VM size with ID "{}" found'
+                .format(size_id)
+            )
 
         name = 'cloudexec_' + str(uuid.uuid4())
         image = image_filtered[0]
