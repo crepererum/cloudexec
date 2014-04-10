@@ -6,7 +6,6 @@ import contextlib
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 import logging
-import os
 import paramiko
 import uuid
 
@@ -190,7 +189,7 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
             key_id = str(
                 base64.encodestring(bytes(profile, 'utf-8')),
                 'utf-8'
-            )[:-2]
+            )[:-1].replace('=', '').replace('+', '-').replace('/', '_')
             key_ssh = cloudexec.common.Key(
                 name=self.tmpdir.name
                 + '/key.ssh.'
