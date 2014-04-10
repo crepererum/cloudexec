@@ -2,10 +2,12 @@ import contextlib
 import logging
 import msgpack
 import os
+import os.path
 import pwd
 import signal
 import subprocess
 import sys
+import xdg.BaseDirectory
 
 
 class Container(object):
@@ -42,6 +44,13 @@ class Key(object):
 class RequestException(Exception):
     def __init__(self, msg):
         Exception.__init__(self, msg)
+
+
+def get_config():
+    path = xdg.BaseDirectory.xdg_config_home + '/cloudexec/cloudexec.conf'
+    if not os.path.isfile(path):
+        path = os.path.expanduser('~/.cloudexecrc')
+    return path
 
 
 def get_user():

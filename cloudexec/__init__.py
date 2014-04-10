@@ -9,7 +9,6 @@ import cloudexec.common
 import cloudexec.daemon
 import logging
 import os
-import os.path
 import signal
 import sys
 import tempfile
@@ -25,7 +24,7 @@ def parse_args():
     parser.add_argument(
         '--config', '-f',
         type=open,
-        default=os.path.expanduser('~/.cloudexecrc'),
+        default=cloudexec.common.get_config(),
         help='Configuration file (YAML)'
     )
 
@@ -93,7 +92,7 @@ def main():
         config = yaml.load(args.config.read())
     config.update(vars(args))
 
-    path = os.path.expanduser('~/.cloudexec')
+    path = '/run/user/{}/cloudexec'.format(os.getuid())
     try:
         os.mkdir(path, 0o700)
     except FileExistsError:
