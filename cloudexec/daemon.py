@@ -213,11 +213,6 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
 
 @asyncio.coroutine
 def coro_daemon(path, config, tmpdir):
-    try:
-        os.mkdir(path, 0o700)
-    except FileExistsError:
-        os.chmod(path, 0o700)
-
     yield from aiozmq.rpc.serve_rpc(
         ServerHandler(config, tmpdir),
         bind='ipc://{}/socket'.format(path),

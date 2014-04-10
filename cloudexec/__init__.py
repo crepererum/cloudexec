@@ -93,12 +93,17 @@ def main():
         config = yaml.load(args.config.read())
     config.update(vars(args))
 
-    tmpdir = tempfile.TemporaryDirectory()
+    path = os.path.expanduser('~/.cloudexec')
+    try:
+        os.mkdir(path, 0o700)
+    except FileExistsError:
+        os.chmod(path, 0o700)
+
+    tmpdir = tempfile.TemporaryDirectory(dir=path)
     os.chmod(tmpdir.name, 0o700)
 
     asyncio.set_event_loop_policy(aiozmq.ZmqEventLoopPolicy())
     loop = asyncio.get_event_loop()
-    path = os.path.expanduser('~/.cloudexec')
     status = 0
     try:
         if config['daemon']:
