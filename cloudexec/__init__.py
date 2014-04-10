@@ -88,6 +88,11 @@ def main():
     )
     logging.info('Start cloudexec')
 
+    if os.stat(args.config.name).st_mode & 0o77 != 0:
+        logging.warn(
+            'Change access rights of config file "%s" to 700 or 600!',
+            args.config.name
+        )
     with args.config:
         config = yaml.load(args.config.read())
     config.update(vars(args))
