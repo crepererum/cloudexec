@@ -56,7 +56,7 @@ class Sshd(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, _value, _traceback):
         self.shutdown()
 
     def shutdown(self):
@@ -72,14 +72,14 @@ class Sshd(object):
 
     def find_port(self, start):
         port = start - 1
-        ok = False
-        while not ok:
+        free = False
+        while not free:
             port += 1
             with socket.socket(
                 socket.AF_INET,
                 socket.SOCK_STREAM
             ) as test_socket:
-                ok = test_socket.connect_ex(('127.0.0.1', port)) != 0
+                free = test_socket.connect_ex(('127.0.0.1', port)) != 0
         return port
 
 
@@ -121,7 +121,7 @@ def execute(container, sshd, mountdir, exedir, executable, arguments):
                 '-oUserKnownHostsFile=/dev/null',
                 '-l' + container.user,
                 '-i' + container.key,
-                container.ip,
+                container.ip_address,
                 '-R{0}:localhost:{0}'.format(sshd.port)
             ],
             stdout=subprocess.DEVNULL,
@@ -133,7 +133,7 @@ def execute(container, sshd, mountdir, exedir, executable, arguments):
         client = paramiko.client.SSHClient()
         client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
         client.connect(
-            container.ip,
+            container.ip_address,
             username=container.user,
             key_filename=container.key,
             look_for_keys=False

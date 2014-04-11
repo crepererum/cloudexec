@@ -11,8 +11,8 @@ import xdg.BaseDirectory
 
 
 class Container(object):
-    def __init__(self, ip, user, key):
-        self.ip = ip
+    def __init__(self, ip_address, user, key):
+        self.ip_address = ip_address
         self.user = user
         self.key = key
 
@@ -61,19 +61,19 @@ def shutdown_process(process):
     process.send_signal(signal.SIGINT)
     try:
         process.wait(timeout=5)
-        ok = True
+        done = True
     except subprocess.TimeoutExpired:
-        ok = False
+        done = False
 
-    if not ok:
+    if not done:
         process.terminate()
         try:
             process.wait(timeout=5)
-            ok = True
+            done = True
         except subprocess.TimeoutExpired:
-            ok = False
+            done = False
 
-    if not ok:
+    if not done:
         process.kill()
         process.wait()
 
@@ -125,7 +125,7 @@ RPC_TRANSLATION_TABLE = {
     0: (
         Container,
         lambda value: msgpack.packb(
-            (value.ip, value.user, value.key),
+            (value.ip_address, value.user, value.key),
             use_bin_type=True
         ),
         lambda binary: Container(*msgpack.unpackb(

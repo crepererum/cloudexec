@@ -128,8 +128,8 @@ def main():
     except KeyboardInterrupt:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         logging.info('Interrupted, waiting for shutdown')
-    except cloudexec.common.RequestException as e:
-        print(e, file=sys.stderr)
+    except cloudexec.common.RequestException as exc:
+        print(exc, file=sys.stderr)
         status = 1
     finally:
         loop.close()

@@ -54,7 +54,7 @@ class Vm(object):
             image=image,
             ex_keyname=name
         )
-        self.ip = self.driver.wait_until_running([self.node])[0][1][0]
+        self.ip_address = self.driver.wait_until_running([self.node])[0][1][0]
         logging.info('VM is up and running')
 
         self.setup()
@@ -65,7 +65,7 @@ class Vm(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, _type, _value, _traceback):
         self.destroy()
 
     def destroy(self):
@@ -83,7 +83,7 @@ class Vm(object):
             client = paramiko.client.SSHClient()
             client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
             client.connect(
-                self.ip,
+                self.ip_address,
                 username='root',
                 key_filename=self.key.name,
                 look_for_keys=False
@@ -130,15 +130,19 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
         self.vms = {}
 
     def __del__(self):
-        for vm in self.vms.values():
-            vm.destroy()
+        for machine in self.vms.values():
+            machine.destroy()
 
     @aiozmq.rpc.method
     def get_container(self, profile: str):
         if profile not in self.vms:
             self.create_vm(profile)
-        vm = self.vms[profile]
-        return cloudexec.common.Container(vm.ip, 'root', vm.key.name)
+        machine = self.vms[profile]
+        return cloudexec.common.Container(
+            machine.ip_address,
+            'root',
+            machine.key.name
+        )
 
     def create_driver(self, account):
         if account not in self.config['accounts']:
@@ -166,11 +170,11 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
             )
 
             logging.info('Provider details are fine')
-        except KeyError as e:
+        except KeyError as exc:
             raise cloudexec.common.RequestException(
                 'Invalid account configuration for account "{0}"'
                 ', "{1}" attribute is missing'
-                .format(account, e.args[0])
+                .format(account, exc.args[0])
             )
 
     def create_vm(self, profile):
@@ -202,11 +206,11 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
                 size_id=str(pconfig['size_id']),
                 key=key_ssh
             )
-        except KeyError as e:
+        except KeyError as exc:
             raise cloudexec.common.RequestException(
                 'Invalid profile configuration for profile "{0}"'
                 ', "{1}" attribute is missing'
-                .format(profile, e.args[0])
+                .format(profile, exc.args[0])
             )
 
 

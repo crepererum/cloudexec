@@ -1,0 +1,10 @@
+[MESSAGES CONTROL]
+disable =
+    missing-docstring,
+    no-member,
+    no-self-use,
+    star-args,
+    too-few-public-methods,
+    too-many-arguments,
+    unused-argument
+

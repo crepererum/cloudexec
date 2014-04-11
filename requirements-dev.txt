@@ -1,2 +1,4 @@
+hg+https://bitbucket.org/logilab/astroid
 flake8==2.1.0
+pylint==1.1.0
 
