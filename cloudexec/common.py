@@ -89,6 +89,7 @@ def wrap_execute(
         channel = client.get_transport().open_session()
         stack.callback(channel.close)
 
+        # execute command and wait for exit
         channel.exec_command(command)
         terminate = False
         while not terminate:
@@ -102,13 +103,29 @@ def wrap_execute(
 
             if out:
                 pipe_out.write(out)
-                pipe_out.flush()
             if err:
                 pipe_err.write(err)
-                pipe_err.flush()
 
             if channel.exit_status_ready() and not out and not err:
                 terminate = True
+
+        # get remaining pipe content
+        out_closed = False
+        err_closed = False
+        while not out_closed or not err_closed:
+            if not out_closed:
+                out = channel.recv(1)
+                if out:
+                    pipe_out.write(out)
+                else:
+                    out_closed = True
+            if not err_closed:
+                err = channel.recv_stderr(1)
+                if err:
+                    pipe_err.write(err)
+                else:
+                    err_closed = True
+
         return channel.recv_exit_status()
 
 
