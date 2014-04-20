@@ -22,7 +22,7 @@ Before you can kick some code you need to configure a cloud provider. Cloudexec 
             provider: rackspace
     profiles:
         default:
-            image_id: 5345417c-23e4-4402-9243-5469cdc4730b
+            image_id: 4d031536-275a-4c17-bedf-c7f34dc50ef8
             size_id: 2
             account: myrackspace
 

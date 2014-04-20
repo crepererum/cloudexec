@@ -8,6 +8,7 @@ from libcloud.compute.providers import get_driver
 import logging
 import paramiko
 import uuid
+import yaml
 
 
 class Vm(object):
@@ -15,28 +16,43 @@ class Vm(object):
         self.driver = driver
         self.key = key
         self.destroyed = False
+        self.node = None
+        self.kpair = None
 
         logging.info('Get VM')
+        images = self.driver.list_images()
+        sizes = self.driver.list_sizes()
+
         image_filtered = [
             i
-            for i in self.driver.list_images()
+            for i in images
             if i.id == image_id
         ]
         size_filtered = [
             s
-            for s in self.driver.list_sizes()
+            for s in sizes
             if s.id == size_id
         ]
 
         if not image_filtered:
             raise cloudexec.common.RequestException(
-                'No VM image with ID "{}" found'
-                .format(image_id)
+                'No VM image with ID "{0}" found\n'
+                'Try one of these:\n'
+                '{1}'
+                .format(image_id, yaml.dump([
+                    {'name': img.name, 'id': img.id}
+                    for img in images
+                ], default_flow_style=False))
             )
         if not size_filtered:
             raise cloudexec.common.RequestException(
-                'No VM size with ID "{}" found'
-                .format(size_id)
+                'No VM size with ID "{0}" found\n'
+                'Try one of these:\n'
+                '{1}'
+                .format(size_id, yaml.dump([
+                    {'name': size.name, 'id': size.id}
+                    for size in sizes
+                ], default_flow_style=False))
             )
 
         name = 'cloudexec_' + str(uuid.uuid4())
@@ -71,8 +87,10 @@ class Vm(object):
     def destroy(self):
         if not self.destroyed:
             logging.info('Destroy VM')
-            self.driver.destroy_node(self.node)
-            self.driver.delete_key_pair(self.kpair)
+            if self.node:
+                self.driver.destroy_node(self.node)
+            if self.kpair:
+                self.driver.delete_key_pair(self.kpair)
             self.destroyed = True
             logging.info('VM was successfully deleted')
 
