@@ -91,8 +91,7 @@ def wrap_execute(
 
         # execute command and wait for exit
         channel.exec_command(command)
-        terminate = False
-        while not terminate:
+        while not channel.exit_status_ready():
             out = b''
             err = b''
 
@@ -106,25 +105,16 @@ def wrap_execute(
             if err:
                 pipe_err.write(err)
 
-            if channel.exit_status_ready() and not out and not err:
-                terminate = True
-
         # get remaining pipe content
-        out_closed = False
-        err_closed = False
-        while not out_closed or not err_closed:
-            if not out_closed:
-                out = channel.recv(1)
-                if out:
-                    pipe_out.write(out)
-                else:
-                    out_closed = True
-            if not err_closed:
-                err = channel.recv_stderr(1)
-                if err:
-                    pipe_err.write(err)
-                else:
-                    err_closed = True
+        out = channel.recv(1)
+        while out:
+            pipe_out.write(out)
+            out = channel.recv(1)
+
+        err = channel.recv_stderr(1)
+        while err:
+            pipe_err.write(err)
+            err = channel.recv_stderr(1)
 
         return channel.recv_exit_status()
 
